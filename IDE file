@@ -1,0 +1,65 @@
+/***************************************************
+ * Water Level Alert System with Dual Threshold
+ * Buzzer beeps 1s ON / 1s OFF when:
+ * - Distance > 150 cm (sensor glitch or overflow)
+ * - Distance < 21 cm (high water level)
+ ***************************************************/
+
+const int trigPin = 5;
+const int echoPin = 6;
+const int buzzerPin = 9;
+
+long duration;
+float distance;
+bool buzzerState = false;
+unsigned long lastToggleTime = 0;
+const unsigned long beepInterval = 1000; // 1 second
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+  digitalWrite(buzzerPin, LOW);
+  Serial.println("Water Level Monitoring Started");
+}
+
+void loop() {
+  // Trigger ultrasonic pulse
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Measure echo time
+  duration = pulseIn(echoPin, HIGH, 60000);
+  if (duration == 0) {
+    Serial.println("No echo detected");
+    digitalWrite(buzzerPin, LOW);
+    return;
+  }
+
+  // Convert to distance in cm
+  distance = (duration * 0.0343) / 2.0;
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  // Beep if distance is outside safe range
+  if (distance > 150 || distance < 21) {
+    unsigned long currentTime = millis();
+    if (currentTime - lastToggleTime >= beepInterval) {
+      buzzerState = !buzzerState;
+      digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
+      lastToggleTime = currentTime;
+    }
+    Serial.println("⚠️ ALERT: Water level is outside safe range!");
+  } else {
+    digitalWrite(buzzerPin, LOW); // Safe
+    buzzerState = false;
+    Serial.println("✅ Safe water level");
+  }
+
+  delay(100); // Small delay for stability
+}
